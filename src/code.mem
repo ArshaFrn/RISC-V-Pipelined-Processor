@@ -1,17 +1,14 @@
-00500093   // 0: addi x1, x0, 5      ; x1 = 5
-00700113   // 1: addi x2, x0, 7      ; x2 = 7
-002081b3   // 2: add  x3, x1, x2     ; x3 = x1 + x2 = 12  (EX forwarding)
-00118233   // 3: add  x4, x3, x1     ; x4 = x3 + x1 = 17  (EX forwarding)
-00302023   // 4: sw   x3, 0(x0)      ; MEM[0] = x3
-00002283   // 5: lw   x5, 0(x0)      ; x5 = MEM[0]
-00228333   // 6: add  x6, x5, x2     ; x6 depends on load -> Load-Use hazard (should Stall=1)
-00130393   // 7: addi x7, x6, 1      ; x7 = x6 + 1
-00738463   // 8: beq  x7, x7, +8     ; always taken branch, tests flush (jumps to instr 10)
-00000013   // 9: addi x0, x0, 0      ; NOP in branch shadow (will be flushed)
-0000006f   // 10: jal  x0, 0         ; infinite loop at PC=10*4, keeps processor running
-00000013
-00000013
-00000013
+00a00093   // 0: addi x1, x0, 10     ; x1 = 10 (Data A)
+01400113   // 1: addi x2, x0, 20     ; x2 = 20 (Data B)
+10000193   // 2: addi x3, x0, 256    ; x3 = 256 (Address Offset to cause conflict)
+00102023   // 3: sw   x1, 0(x0)      ; MEM[0]=10. Cache Index 0 filled with Tag A.
+0021a023   // 4: sw   x2, 0(x3)      ; MEM[256]=20. Cache Index 0 overwritten with Tag B! (Eviction)
+00002203   // 5: lw   x4, 0(x0)      ; Load from MEM[0]. Cache checks Index 0, finds Tag B. MISS! Reloads 10.
+0001a283   // 6: lw   x5, 0(x3)      ; Load from MEM[256]. Cache checks Index 0, finds Tag A (from prev instr). MISS! Reloads 20.
+00520333   // 7: add  x6, x4, x5     ; x6 = x4 + x5 = 30. (Tests Load-Use Hazard + Forwarding)
+00630463   // 8: beq  x6, x6, +8     ; Branch taken. Skips next instruction.
+00000013   // 9: addi x0, x0, 0      ; NOP (Should be flushed)
+0000006f   // 10: jal x0, 0          ; Infinite Loop
 00000013
 00000013
 00000013
