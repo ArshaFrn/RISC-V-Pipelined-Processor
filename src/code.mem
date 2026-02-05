@@ -1,0 +1,20 @@
+00500093   // 0: addi x1, x0, 5      ; x1 = 5
+00700113   // 1: addi x2, x0, 7      ; x2 = 7
+002081b3   // 2: add  x3, x1, x2     ; x3 = x1 + x2 = 12  (EX forwarding)
+00118233   // 3: add  x4, x3, x1     ; x4 = x3 + x1 = 17  (EX forwarding)
+00302023   // 4: sw   x3, 0(x0)      ; MEM[0] = x3
+00002283   // 5: lw   x5, 0(x0)      ; x5 = MEM[0]
+00228333   // 6: add  x6, x5, x2     ; x6 depends on load -> Load-Use hazard (should Stall=1)
+00130393   // 7: addi x7, x6, 1      ; x7 = x6 + 1
+00738463   // 8: beq  x7, x7, +8     ; always taken branch, tests flush (jumps to instr 10)
+00000013   // 9: addi x0, x0, 0      ; NOP in branch shadow (will be flushed)
+0000006f   // 10: jal  x0, 0         ; infinite loop at PC=10*4, keeps processor running
+00000013
+00000013
+00000013
+00000013
+00000013
+00000013
+00000013
+00000013
+00000013
