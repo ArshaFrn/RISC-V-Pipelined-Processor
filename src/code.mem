@@ -1,17 +1,36 @@
-00a00093   // 0: addi x1, x0, 10     ; x1 = 10 (Data A)
-01400113   // 1: addi x2, x0, 20     ; x2 = 20 (Data B)
-10000193   // 2: addi x3, x0, 256    ; x3 = 256 (Address Offset to cause conflict)
-00102023   // 3: sw   x1, 0(x0)      ; MEM[0]=10. Cache Index 0 filled with Tag A.
-0021a023   // 4: sw   x2, 0(x3)      ; MEM[256]=20. Cache Index 0 overwritten with Tag B! (Eviction)
-00002203   // 5: lw   x4, 0(x0)      ; Load from MEM[0]. Cache checks Index 0, finds Tag B. MISS! Reloads 10.
-0001a283   // 6: lw   x5, 0(x3)      ; Load from MEM[256]. Cache checks Index 0, finds Tag A (from prev instr). MISS! Reloads 20.
-00520333   // 7: add  x6, x4, x5     ; x6 = x4 + x5 = 30. (Tests Load-Use Hazard + Forwarding)
-00630463   // 8: beq  x6, x6, +8     ; Branch taken. Skips next instruction.
-00000013   // 9: addi x0, x0, 0      ; NOP (Should be flushed)
-0000006f   // 10: jal x0, 0          ; Infinite Loop
-00000013
-00000013
-00000013
-00000013
-00000013
-00000013
+00a00093   // 0: addi x1, x0, 10      ; x1 = 10 (Data A)
+01400113   // 1: addi x2, x0, 20      ; x2 = 20 (Data B)  
+01e00193   // 2: addi x3, x0, 30      ; x3 = 30 (Data C)
+00c00213   // 3: addi x4, x0, 12      ; x4 = 12 (Data D)
+
+00102023   // 4: sw x1, 0(x0)         ; STORE 1: Write 10 to addr 0x0    (Index=0, Tag=0x0) → Cache[0]: tag=0x0, data=10
+
+00502223   // 5: sw x2, 4(x0)         ; STORE 2: Write 20 to addr 0x4    (Index=1, Tag=0x0) → Cache[1]: tag=0x0, data=20
+
+00902423   // 6: sw x3, 8(x0)         ; STORE 3: Write 30 to addr 0x8    (Index=2, Tag=0x0) → Cache[2]: tag=0x0, data=30
+
+00102203   // 7: lw x4, 0(x0)         ; LOAD 1 (HIT): Read from addr 0x0 → Cache[0] hit, get 10 → x4=10
+
+00502283   // 8: lw x5, 4(x0)         ; LOAD 2 (HIT): Read from addr 0x4 → Cache[1] hit, get 20 → x5=20
+
+00902303   // 9: lw x6, 8(x0)         ; LOAD 3 (HIT): Read from addr 0x8 → Cache[2] hit, get 30 → x6=30
+
+01002623   // 10: sw x4, 16(x0)       ; STORE 4: Write x4(10) to addr 0x10 (Index=4, Tag=0x0) → Cache[4]: tag=0x0, data=10
+
+01002203   // 11: lw x4, 16(x0)       ; LOAD 4 (HIT): Read from addr 0x10 → Cache[4] hit, get 10 → x4=10
+
+10000293   // 12: addi x5, x0, 256    ; x5 = 256 (Offset for conflict)
+
+40502823   // 13: sw x2, 0(x5)        ; STORE 5 (CONFLICT): Write 20 to addr 0x100 (Index=0, Tag=0x4) → EVICT Cache[0], Cache[0]: tag=0x4, data=20
+
+00102203   // 14: lw x4, 0(x0)        ; LOAD 5 (MISS): Read from addr 0x0 → Cache[0] has tag=0x4 ≠ 0x0 → MISS, reload from MEM → x4=10
+
+40502283   // 15: lw x5, 0(x5)        ; LOAD 6 (HIT): Read from addr 0x100 → Cache[0] has tag=0x4, data=20 → HIT → x5=20
+
+20000313   // 16: addi x6, x0, 512    ; x6 = 512 (Another offset)
+
+00502623   // 17: sw x2, 0(x6)        ; STORE 6 (CONFLICT): Write 20 to addr 0x200 (Index=0, Tag=0x8) → EVICT Cache[0], Cache[0]: tag=0x8, data=20
+
+00102203   // 18: lw x4, 0(x0)        ; LOAD 7 (MISS): Read from addr 0x0 → Cache[0] has tag=0x8 ≠ 0x0 → MISS, reload from MEM → x4=10
+
+00000013   // 19: addi x0, x0, 0      ; NOP (End marker)
