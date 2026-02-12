@@ -14,7 +14,7 @@ module Controller(input logic [31:0] instruction,
     	case (opcode)
     		7'b0110011: begin	// R-type instructions
     			reg_wr <= 1;
-    			sel_A <= 1;
+    			sel_A <= 0;   // Use RS1 as first ALU operand
     			sel_B <= 0;
     			rd_en <= 0;
     			wb_sel <= 0;
@@ -29,9 +29,9 @@ module Controller(input logic [31:0] instruction,
 					3'b111:	alu_op <= 8;
 				endcase
 			end
-			7'b0010011: begin	// I-type instructions
+			7'b0010011: begin	// I-type instructions (addi, etc.)
     			reg_wr <= 1;
-    			sel_A <= 1;
+    			sel_A <= 0;   // RS1 + immediate
     			sel_B <= 1;
     			rd_en <= 0;
     			wb_sel <= 0;
@@ -48,7 +48,7 @@ module Controller(input logic [31:0] instruction,
 			end
 			7'b0000011: begin	// Load instructions
     			reg_wr <= 1;
-    			sel_A <= 1;
+    			sel_A <= 0;   // base address RS1 + offset
     			sel_B <= 1;
     			rd_en <= 1;
     			wr_en <= 0;
@@ -58,7 +58,7 @@ module Controller(input logic [31:0] instruction,
 			end
 			7'b0100011: begin	// S-type instructions
     			reg_wr <= 0;
-    			sel_A <= 1;
+    			sel_A <= 0;   // base address RS1 + offset
     			sel_B <= 1;
     			rd_en <= 0;
     			wr_en <= 1;
@@ -76,9 +76,9 @@ module Controller(input logic [31:0] instruction,
     			alu_op <= 0;
     			br_type <= func3;
 			end			
-			7'b0110111: begin	// U-type instructions
+			7'b0110111: begin	// U-type instructions (LUI)
     			reg_wr <= 1;
-    			sel_A <= 1;
+    			sel_A <= 0;   // use RS1 path (typically x0) + immediate
     			sel_B <= 1;
     			rd_en <= 0;
     			wr_en <= 0;

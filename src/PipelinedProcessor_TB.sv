@@ -22,17 +22,17 @@ module PipelinedProcessor_TB;
     initial begin
         // 1. Initialize
         reset = 1;
-        
+
         // 2. Hold Reset for a few cycles
         #10;
-        
+
         // 3. Release Reset
         reset = 0;
 
         // 4. Run Simulation
         // 500ns is enough for the 19 instructions in your code.mem
-        #500; 
-        
+        #500;
+
         $display("Simulation Finished.");
         $stop;
     end
@@ -43,14 +43,14 @@ module PipelinedProcessor_TB;
         logic [2:0] funct3;
         logic [6:0] funct7;
         logic [4:0] rs1, rs2, rd;
-        
+
         opcode = instr[6:0];
         funct3 = instr[14:12];
         funct7 = instr[31:25];
         rs1 = instr[19:15];
         rs2 = instr[24:20];
         rd = instr[11:7];
-        
+
         case (opcode)
             7'b0010011: begin  // I-type (addi, ori, etc.)
                 case (funct3)
@@ -61,12 +61,12 @@ module PipelinedProcessor_TB;
                     3'b110: return $sformatf("ori x%0d, x%0d, %0d", rd, rs1, $signed(instr[31:20]));
                     3'b111: return $sformatf("andi x%0d, x%0d, %0d", rd, rs1, $signed(instr[31:20]));
                     3'b001: return $sformatf("slli x%0d, x%0d, %0d", rd, rs1, instr[24:20]);
-                    3'b101: return (funct7[5]) ? $sformatf("srai x%0d, x%0d, %0d", rd, rs1, instr[24:20]) 
+                    3'b101: return (funct7[5]) ? $sformatf("srai x%0d, x%0d, %0d", rd, rs1, instr[24:20])
                                                : $sformatf("srli x%0d, x%0d, %0d", rd, rs1, instr[24:20]);
                     default: return "unknown";
                 endcase
             end
-            
+
             7'b0110011: begin  // R-type (add, sub, etc.)
                 case ({funct7[5], funct3})
                     4'b0000: return $sformatf("add x%0d, x%0d, x%0d", rd, rs1, rs2);
@@ -82,7 +82,7 @@ module PipelinedProcessor_TB;
                     default: return "unknown";
                 endcase
             end
-            
+
             7'b0000011: begin  // Load (lw, lh, lb)
                 case (funct3)
                     3'b000: return $sformatf("lb x%0d, %0d(x%0d)", rd, $signed(instr[31:20]), rs1);
@@ -93,7 +93,7 @@ module PipelinedProcessor_TB;
                     default: return "unknown";
                 endcase
             end
-            
+
             7'b0100011: begin  // Store (sw, sh, sb)
                 case (funct3)
                     3'b000: return $sformatf("sb x%0d, %0d(x%0d)", rs2, {{20{instr[31]}}, instr[31:25], instr[11:7]}, rs1);
@@ -102,7 +102,7 @@ module PipelinedProcessor_TB;
                     default: return "unknown";
                 endcase
             end
-            
+
             7'b1100011: begin  // Branch (beq, bne, etc.)
                 case (funct3)
                     3'b000: return $sformatf("beq x%0d, x%0d, %0d", rs1, rs2, $signed({instr[31], instr[7], instr[30:25], instr[11:8], 1'b0}));
@@ -114,32 +114,47 @@ module PipelinedProcessor_TB;
                     default: return "unknown";
                 endcase
             end
-            
+
             7'b1101111: return $sformatf("jal x%0d, %0d", rd, $signed({instr[31], instr[19:12], instr[20], instr[30:21], 1'b0}));
             7'b1100111: return $sformatf("jalr x%0d, x%0d, %0d", rd, rs1, $signed(instr[31:20]));
-            
+
             default: return $sformatf("unknown (0x%h)", instr);
         endcase
     endfunction
 
+    // =========================================================================
+    // HELPER: MEM Stage Monitor
+    // =========================================================================
+    reg [8*6-1:0] Mem_Stage_Action; // String buffer
+
+    always @(*) begin
+        // Monitor the output of the EX/MEM pipeline register to see what MEM is doing
+        if (UUT.pipe_ex_mem.mem_read_out) 
+            Mem_Stage_Action = "READ  "; 
+        else if (UUT.pipe_ex_mem.mem_write_out) 
+            Mem_Stage_Action = "WRITE ";
+        else 
+            Mem_Stage_Action = "------";
+    end
+
     // Monitor / Debugging
-    // This block prints the status of the pipeline every time a signal changes
     initial begin
-        $display("----------------------------------------------------------------------------------------------------------------");
-        $display("Time  | PC (IF)   | Instruction         | Stall | ForwardA | ForwardB | CacheHit | WB Reg | WB Data");
-        $display("----------------------------------------------------------------------------------------------------------------");
-        
+        $display("---------------------------------------------------------------------------------------------------------------------------------------------");
+        $display("Time  | PC (IF)   | Instruction         | MEM Action | Stall | ForwardA | ForwardB | CacheHit | WB Reg | WB Data");
+        $display("---------------------------------------------------------------------------------------------------------------------------------------------");
+
         // Internal signals can be accessed using "UUT.SignalName"
-        $monitor("%5t | %h | %-20s | %b | %02b | %02b | %b | x%0d | %h",
+        $monitor("%5t | %h | %-20s |   %-6s   |   %b   |    %02b    |    %02b    |    %b     |  x%0d   | %0d",
             $time,
-            UUT.IF_PC,        // Current PC
-            decode_instruction(UUT.ID_Instr),  // Decoded instruction name
-            UUT.Stall,        // Hazard Stall Signal
-            UUT.ForwardA,     // Forwarding Status A
-            UUT.ForwardB,     // Forwarding Status B
-            UUT.CacheHit,     // Cache Hit Status
-            UUT.WB_Rd,        // Register being written back
-            UUT.WB_Result     // Value being written back
+            UUT.IF_PC,                        // Current PC
+            decode_instruction(UUT.ID_Instr), // Decoded instruction name
+            Mem_Stage_Action,                 // What the MEM Stage is doing (READ/WRITE/IDLE)
+            UUT.Stall,                        // Hazard Stall Signal
+            UUT.ForwardA,                     // Forwarding Status A
+            UUT.ForwardB,                     // Forwarding Status B
+            UUT.CacheHit,                     // Cache Hit Status
+            UUT.WB_Rd,                        // Register being written back
+            UUT.WB_Result                     // Value being written back
         );
     end
 
