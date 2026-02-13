@@ -39,15 +39,13 @@ module CacheSystem (
     );
 
     // =========================================================
-    // HIT / MISS LOGIC (FIXED)
+    // HIT / MISS LOGIC
     // =========================================================
     wire valid_bit = cache_valid[index];
     wire [23:0] stored_tag = cache_tag[index];
     wire tag_match = (stored_tag == tag);
 
     always @(*) begin
-        // Only assert HIT for READ operations
-        // Writes should NEVER report a hit, regardless of state
         if (!mem_write && mem_read && valid_bit && tag_match)
             hit = 1'b1;
         else

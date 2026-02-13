@@ -46,7 +46,7 @@ module Pipe_ID_EX (
 );
     always @(posedge clk or posedge reset) begin
         if (reset || flush) begin
-            // Clear Control Signals (Bubble)
+            // Clear Control Signals
             alu_op_out <= 0; mask_out <= 0; br_type_out <= 0;
             wb_sel_out <= 0; reg_wr_out <= 0; mem_read_out <= 0;
             mem_write_out <= 0; sel_a_out <= 0; sel_b_out <= 0;
@@ -55,7 +55,6 @@ module Pipe_ID_EX (
             rdata1_out <= 0; rdata2_out <= 0; imm_out <= 0;
             rs1_out <= 0; rs2_out <= 0; rd_out <= 0; opcode_out <= 0;
         end else begin
-            // Normal Operation
             alu_op_out <= alu_op_in; mask_out <= mask_in; br_type_out <= br_type_in;
             wb_sel_out <= wb_sel_in; reg_wr_out <= reg_wr_in; mem_read_out <= mem_read_in;
             mem_write_out <= mem_write_in; sel_a_out <= sel_a_in; sel_b_out <= sel_b_in;

@@ -2,42 +2,33 @@
 
 module PipelinedProcessor_TB;
 
-    // Inputs to Processor
     reg clk;
     reg reset;
 
-    // Instantiate the Pipelined Processor (UUT)
     PipelinedProcessor UUT (
         .clk(clk),
         .reset(reset)
     );
 
-    // Clock Generation (10ns period -> 100MHz)
+    // 10ns period -> 100MHz
     initial begin
         clk = 0;
         forever #5 clk = ~clk;
     end
 
-    // Test Sequence
     initial begin
-        // 1. Initialize
         reset = 1;
 
-        // 2. Hold Reset for a few cycles
         #10;
 
-        // 3. Release Reset
         reset = 0;
 
-        // 4. Run Simulation
-        // 500ns is enough for the 19 instructions in your code.mem
         #500;
 
         $display("Simulation Finished.");
         $stop;
     end
 
-    // Function to decode RISC-V instruction to name
     function automatic string decode_instruction(input [31:0] instr);
         logic [6:0] opcode;
         logic [2:0] funct3;
@@ -122,13 +113,10 @@ module PipelinedProcessor_TB;
         endcase
     endfunction
 
-    // =========================================================================
-    // HELPER: MEM Stage Monitor
-    // =========================================================================
-    reg [8*6-1:0] Mem_Stage_Action; // String buffer
+
+    reg [8*6-1:0] Mem_Stage_Action; 
 
     always @(*) begin
-        // Monitor the output of the EX/MEM pipeline register to see what MEM is doing
         if (UUT.pipe_ex_mem.mem_read_out) 
             Mem_Stage_Action = "READ  "; 
         else if (UUT.pipe_ex_mem.mem_write_out) 
